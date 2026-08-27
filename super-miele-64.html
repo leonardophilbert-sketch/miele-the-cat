@@ -15,7 +15,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    * {
+      box-sizing: border-box; margin: 0; padding: 0;
+      user-select: none; -webkit-user-select: none;
+      touch-action: none; -webkit-touch-callout: none;
+    }
     html, body {
       width: 100%; height: 100%; overflow: hidden;
       background: #080c14; font-family: 'Press Start 2P', monospace;
@@ -42,15 +46,15 @@
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
       z-index: 10;
-      padding-top: env(safe-area-inset-top, 0px);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-top: max(10px, env(safe-area-inset-top, 10px));
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
     }
     .top-bar {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 14px; pointer-events: auto;
+      padding: 6px 14px; pointer-events: auto;
       text-shadow: 2px 2px #000;
     }
-    .hud-text { font-size: 8.5px; line-height: 1.4; color: #fff; }
+    .hud-text { font-size: 8px; line-height: 1.4; color: #fff; }
     .hud-val { color: #fbc531; }
     .icon-btn {
       background: #1e2638; border: 2px solid #54a0ff; color: #fff;
@@ -60,34 +64,34 @@
     .icon-btn:active { transform: translateY(2px); box-shadow: 0 1px #0f1420; }
     .crt-overlay {
       position: absolute; inset: 0; pointer-events: none;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-      background-size: 100% 4px; opacity: 0.3; z-index: 5;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.08) 50%);
+      background-size: 100% 4px; opacity: 0.25; z-index: 5;
     }
     
-    /* Touch controls */
+    /* Robust Multi-Touch Controls (Optimized for iPhone thumb reach) */
     .touch-controls {
-      position: absolute; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 0;
+      position: absolute; bottom: max(10px, env(safe-area-inset-bottom, 10px)); left: 0;
       width: 100%; padding: 0 14px; display: flex; justify-content: space-between; align-items: flex-end;
-      pointer-events: auto; z-index: 20;
+      pointer-events: none; z-index: 20;
     }
-    .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 44px); gap: 4px; }
+    .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(2, 44px); gap: 4px; pointer-events: auto; }
     .dpad-btn {
-      background: rgba(18, 24, 38, 0.88); border: 2px solid #54a0ff; color: #fff;
-      font-family: inherit; font-size: 15px; border-radius: 10px;
+      background: rgba(16, 22, 34, 0.88); border: 2px solid #54a0ff; color: #fff;
+      font-family: inherit; font-size: 16px; border-radius: 10px;
       display: flex; justify-content: center; align-items: center;
-      box-shadow: 0 4px #080c14; outline: none; -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 4px #080c14; outline: none;
     }
-    .dpad-btn:active { background: #54a0ff; color: #000; transform: translateY(2px); }
-    .action-btns { display: flex; gap: 10px; }
+    .dpad-btn.active, .dpad-btn:active { background: #54a0ff; color: #000; transform: translateY(2px); }
+    .action-btns { display: flex; gap: 12px; pointer-events: auto; }
     .action-btn {
-      width: 56px; height: 56px; border-radius: 50%;
+      width: 58px; height: 58px; border-radius: 50%;
       background: #e84118; border: 3px solid #ff6b81; color: #fff;
       font-family: inherit; font-size: 10px;
       display: flex; flex-direction: column; justify-content: center; align-items: center;
-      box-shadow: 0 5px #8c1d07; outline: none; -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 5px #8c1d07; outline: none;
     }
     .action-btn.btn-b { background: #2ed573; border-color: #7bed9f; box-shadow: 0 5px #15733d; }
-    .action-btn:active { transform: translateY(3px); box-shadow: 0 1px #000; }
+    .action-btn.active, .action-btn:active { transform: translateY(3px); box-shadow: 0 1px #000; }
 
     /* Wardrobe Modal */
     .modal {
@@ -185,7 +189,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 
-// Block standard size constant: 36x36
+// Standard grid block unit: 36x36
 const B_SIZE = 36;
 
 // Audio Synthesizer (Authentic Classic Mario 1-1 BGM & SFX)
@@ -254,7 +258,7 @@ class SuperMieleGame {
     this.equippedHat = localStorage.getItem('miele_hat') || 'none';
     this.unlockedHats = JSON.parse(localStorage.getItem('fc_unlocked_hats') || '["none"]');
 
-    // Miele Player (Exact 36x36 standard block unit hitbox!)
+    // Miele Player (Exact 36x36 block size hitbox)
     this.w = B_SIZE;
     this.h = B_SIZE;
     this.x = 60;
@@ -263,8 +267,8 @@ class SuperMieleGame {
     this.vy = 0;
     this.facing = 1;
     this.onGround = false;
-    this.isDead = false;
     this.goalReached = false;
+    this.victoryTally = false;
     this.walkTimer = 0;
 
     // Camera & Level
@@ -294,10 +298,10 @@ class SuperMieleGame {
     this.floatingCoins = [];
     this.flagpole = null;
 
-    // Ground segments
+    // Ground segments (Contiguous 36px aligned)
     this.platforms.push({ x: 0, y: this.groundY, w: 1080, h: 160 });
-    this.platforms.push({ x: 1160, y: this.groundY, w: 620, h: 160 });
-    this.platforms.push({ x: 1860, y: this.groundY, w: 1740, h: 160 });
+    this.platforms.push({ x: 1152, y: this.groundY, w: 612, h: 160 });
+    this.platforms.push({ x: 1836, y: this.groundY, w: 1764, h: 160 });
 
     // Decorative Green Hills
     this.hills.push({ x: 40, y: this.groundY - 56, w: 120, h: 56 });
@@ -318,35 +322,35 @@ class SuperMieleGame {
 
     // Section 1: Exactly like user's World 1-1 reference screenshot!
     // Floating single [?] block
-    this.blocks.push({ x: 280, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'qblock', item: 'coin', hit: false, bumpY: 0 });
+    this.blocks.push({ x: 288, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'qblock', item: 'coin', hit: false, bumpY: 0 });
     
-    // Row of 5: [Brick][?][Brick][?][Brick] (Exact 36x36 squares seamlessly connected!)
-    this.blocks.push({ x: 380, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'brick', hit: false, bumpY: 0 });
-    this.blocks.push({ x: 416, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'qblock', item: 'coin', hit: false, bumpY: 0 });
-    this.blocks.push({ x: 452, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'brick', hit: false, bumpY: 0 });
-    this.blocks.push({ x: 488, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'qblock', item: 'coin', hit: false, bumpY: 0 });
-    this.blocks.push({ x: 524, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'brick', hit: false, bumpY: 0 });
+    // Row of 5: [Brick][?][Brick][?][Brick] (Exact 36x36 contiguous squares)
+    this.blocks.push({ x: 396, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'brick', hit: false, bumpY: 0 });
+    this.blocks.push({ x: 432, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'qblock', item: 'coin', hit: false, bumpY: 0 });
+    this.blocks.push({ x: 468, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'brick', hit: false, bumpY: 0 });
+    this.blocks.push({ x: 504, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'qblock', item: 'coin', hit: false, bumpY: 0 });
+    this.blocks.push({ x: 540, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: 'brick', hit: false, bumpY: 0 });
 
     // High floating [?] block above row
-    this.blocks.push({ x: 452, y: this.groundY - 240, w: B_SIZE, h: B_SIZE, type: 'qblock', item: 'star', hit: false, bumpY: 0 });
+    this.blocks.push({ x: 468, y: this.groundY - 240, w: B_SIZE, h: B_SIZE, type: 'qblock', item: 'star', hit: false, bumpY: 0 });
 
-    // Green Warp Pipes
-    this.pipes.push({ x: 640, y: this.groundY - 60, w: 56, h: 60 });
-    this.pipes.push({ x: 880, y: this.groundY - 84, w: 56, h: 84 });
-    this.pipes.push({ x: 1300, y: this.groundY - 104, w: 56, h: 104 });
-    this.pipes.push({ x: 1680, y: this.groundY - 104, w: 56, h: 104 });
-    this.pipes.push({ x: 2380, y: this.groundY - 84, w: 56, h: 84 });
+    // Green Warp Pipes (W: 56, H: 60/84/104)
+    this.pipes.push({ x: 648, y: this.groundY - 60, w: 56, h: 60 });
+    this.pipes.push({ x: 864, y: this.groundY - 84, w: 56, h: 84 });
+    this.pipes.push({ x: 1296, y: this.groundY - 108, w: 56, h: 108 });
+    this.pipes.push({ x: 1692, y: this.groundY - 108, w: 56, h: 108 });
+    this.pipes.push({ x: 2376, y: this.groundY - 84, w: 56, h: 84 });
 
     // Section 2: Brick Formations & High [?] Blocks
-    for (let bx = 1400; bx < 1560; bx += B_SIZE) {
-      this.blocks.push({ x: bx, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: (bx === 1472 ? 'qblock' : 'brick'), item: 'coin', hit: false, bumpY: 0 });
+    for (let bx = 1404; bx < 1584; bx += B_SIZE) {
+      this.blocks.push({ x: bx, y: this.groundY - 120, w: B_SIZE, h: B_SIZE, type: (bx === 1476 ? 'qblock' : 'brick'), item: 'coin', hit: false, bumpY: 0 });
     }
-    for (let bx = 1436; bx < 1520; bx += B_SIZE) {
+    for (let bx = 1440; bx < 1548; bx += B_SIZE) {
       this.blocks.push({ x: bx, y: this.groundY - 240, w: B_SIZE, h: B_SIZE, type: 'brick', hit: false, bumpY: 0 });
     }
 
     // Section 3: Staircase Pyramid to the Flagpole
-    let sx = 2720;
+    let sx = 2700;
     for (let step = 1; step <= 8; step++) {
       for (let h = 0; h < step; h++) {
         this.blocks.push({ x: sx + step * B_SIZE, y: this.groundY - (h + 1) * B_SIZE, w: B_SIZE, h: B_SIZE, type: 'stair', hit: false, bumpY: 0 });
@@ -359,12 +363,12 @@ class SuperMieleGame {
     // Castle at finish line
     this.castle = { x: 3240, y: this.groundY - 150, w: 160, h: 150 };
 
-    // Enemies (Exact 36x36 standard block unit hitbox!)
+    // Enemies (Exact 36x36 standard block unit hitbox)
     const enemyData = [
       { x: 360, type: 'goomba' },
-      { x: 540, type: 'goomba' },
-      { x: 760, type: 'bobomb' },
-      { x: 940, type: 'goomba' },
+      { x: 550, type: 'goomba' },
+      { x: 750, type: 'bobomb' },
+      { x: 950, type: 'goomba' },
       { x: 1360, type: 'bobomb' },
       { x: 1520, type: 'goomba' },
       { x: 1940, type: 'bobomb' },
@@ -379,18 +383,34 @@ class SuperMieleGame {
   }
 
   initControls() {
-    const setupBtn = (id, key) => {
+    const setupTouchBtn = (id, key) => {
       const b = document.getElementById(id);
       if (!b) return;
-      b.addEventListener('pointerdown', (e) => { e.preventDefault(); audio.ensure(); this.keys[key] = true; });
-      b.addEventListener('pointerup', (e) => { e.preventDefault(); this.keys[key] = false; });
-      b.addEventListener('pointercancel', (e) => { e.preventDefault(); this.keys[key] = false; });
+      const onStart = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        audio.ensure();
+        this.keys[key] = true;
+        b.classList.add('active');
+        if (key === 'jump' && (this.state === 'MENU' || this.state === 'GAMEOVER')) this.startRun();
+      };
+      const onEnd = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        this.keys[key] = false;
+        b.classList.remove('active');
+      };
+      b.addEventListener('touchstart', onStart, { passive: false });
+      b.addEventListener('touchend', onEnd, { passive: false });
+      b.addEventListener('touchcancel', onEnd, { passive: false });
+      b.addEventListener('pointerdown', onStart);
+      b.addEventListener('pointerup', onEnd);
+      b.addEventListener('pointercancel', onEnd);
     };
-    setupBtn('btn-left', 'left');
-    setupBtn('btn-right', 'right');
-    setupBtn('btn-down', 'down');
-    setupBtn('btn-jump', 'jump');
-    setupBtn('btn-run', 'run');
+
+    setupTouchBtn('btn-left', 'left');
+    setupTouchBtn('btn-right', 'right');
+    setupTouchBtn('btn-down', 'down');
+    setupTouchBtn('btn-jump', 'jump');
+    setupTouchBtn('btn-run', 'run');
 
     window.addEventListener('keydown', (e) => {
       if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.keys.left = true;
@@ -440,7 +460,7 @@ class SuperMieleGame {
     this.state = 'PLAYING';
     this.x = 60; this.y = 400; this.vx = 0; this.vy = 0;
     this.score = 0; this.coins = 0; this.timeRemaining = 400;
-    this.isDead = false; this.goalReached = false;
+    this.goalReached = false; this.victoryTally = false;
     this.initLevel();
     this.updateHUD();
     audio.tone(523, 'square', 0.15, 0.2);
@@ -465,7 +485,7 @@ class SuperMieleGame {
         this.x += this.vx * dt;
         this.walkTimer += dt;
         if (this.x >= this.castle.x + 60) {
-          this.state = 'MENU';
+          this.victoryTally = true;
           audio.stopBGM();
         }
       }
@@ -477,7 +497,7 @@ class SuperMieleGame {
       this.die(); return;
     }
 
-    // Miele Physics
+    // Physics
     const maxSpeed = this.keys.run ? 240 : 160;
     const accel = 620;
     const friction = 520;
@@ -504,12 +524,10 @@ class SuperMieleGame {
 
     this.vy += gravity * dt;
 
-    // Separate Horizontal & Vertical AABB Collision Resolution for Exact Crisp Feel!
-    // 1. Horizontal Movement & Block/Pipe Side Collisions
+    // Horizontal Movement & Collisions
     this.x += this.vx * dt;
     this.x = Math.max(0, this.x);
 
-    // Pipes side collision
     this.pipes.forEach(p => {
       if (this.checkAABB(this.x, this.y, this.w, this.h, p.x, p.y + 4, p.w, p.h - 4)) {
         if (this.vx > 0) this.x = p.x - this.w;
@@ -518,7 +536,6 @@ class SuperMieleGame {
       }
     });
 
-    // Blocks side collision
     this.blocks.forEach(b => {
       if (this.checkAABB(this.x, this.y + 4, this.w, this.h - 8, b.x, b.y, b.w, b.h)) {
         if (this.vx > 0) this.x = b.x - this.w;
@@ -527,11 +544,10 @@ class SuperMieleGame {
       }
     });
 
-    // 2. Vertical Movement & Landing / Hitting from Below
+    // Vertical Movement & Collisions
     this.y += this.vy * dt;
     this.onGround = false;
 
-    // Ground platforms landing
     this.platforms.forEach(p => {
       if (this.x + this.w - 4 > p.x && this.x + 4 < p.x + p.w) {
         if (this.y + this.h >= p.y && this.y + this.h <= p.y + 24 && this.vy >= 0) {
@@ -542,7 +558,6 @@ class SuperMieleGame {
       }
     });
 
-    // Pipes top landing
     this.pipes.forEach(p => {
       if (this.x + this.w - 4 > p.x && this.x + 4 < p.x + p.w) {
         if (this.y + this.h >= p.y && this.y + this.h <= p.y + 20 && this.vy >= 0) {
@@ -553,17 +568,14 @@ class SuperMieleGame {
       }
     });
 
-    // Blocks vertical collisions
     this.blocks.forEach(b => {
       if (b.bumpY < 0) b.bumpY += 80 * dt;
       if (this.x + this.w - 4 > b.x && this.x + 4 < b.x + b.w) {
-        // Landing on top of block
         if (this.y + this.h >= b.y && this.y + this.h <= b.y + 18 && this.vy >= 0) {
           this.y = b.y - this.h;
           this.vy = 0;
           this.onGround = true;
         }
-        // Hitting block from below (exact block hitbox!)
         else if (this.y <= b.y + b.h && this.y >= b.y + b.h - 18 && this.vy < 0) {
           this.y = b.y + b.h;
           this.vy = 20;
@@ -584,22 +596,20 @@ class SuperMieleGame {
       }
     });
 
-    // Enemy AI & Collisions (Exact 36x36 block hitbox!)
-    this.enemies.forEach(e => {
+    // Enemy AI & Collisions (Squish timer bug fixed!)
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
       if (!e.dead) {
         e.x += e.vx * dt;
         e.waddle += dt * 8;
-        // Pipe turnaround
         this.pipes.forEach(p => {
           if (this.checkAABB(e.x, e.y, e.w, e.h, p.x, p.y, p.w, p.h)) e.vx = -e.vx;
         });
 
-        // Player vs Enemy AABB collision
         if (this.checkAABB(this.x + 4, this.y + 4, this.w - 8, this.h - 4, e.x + 4, e.y + 4, e.w - 8, e.h - 4)) {
-          // Stomp on top half of enemy
           if (this.vy > 0 && this.y + this.h <= e.y + 20) {
-            e.dead = true; e.squishTimer = 0.5;
-            this.vy = -320; // nice bouncy stomp
+            e.dead = true; e.squishTimer = 0.45;
+            this.vy = -320;
             audio.stomp();
             this.score += 100;
             this.spawnText(e.x, e.y - 15, '100', '#fff');
@@ -608,8 +618,13 @@ class SuperMieleGame {
             this.die();
           }
         }
+      } else {
+        e.squishTimer -= dt;
+        if (e.squishTimer <= 0) {
+          this.enemies.splice(i, 1);
+        }
       }
-    });
+    }
 
     // Flagpole Goal Trigger
     if (this.flagpole && !this.flagpole.cleared) {
@@ -660,14 +675,14 @@ class SuperMieleGame {
   }
 
   render() {
-    // 1. Classic Blue Sky Background
+    // 1. Classic Blue Sky
     ctx.fillStyle = '#5c94fc';
     ctx.fillRect(0, 0, 360, 640);
 
     ctx.save();
     ctx.translate(-this.camX, 0);
 
-    // 2. Fluffy White Clouds
+    // 2. Clouds
     this.clouds.forEach(c => {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
@@ -677,7 +692,7 @@ class SuperMieleGame {
       ctx.fill();
     });
 
-    // 3. Shaded Green Hills
+    // 3. Hills with cute eyes
     this.hills.forEach(h => {
       ctx.fillStyle = '#00a800';
       ctx.beginPath();
@@ -692,7 +707,7 @@ class SuperMieleGame {
       ctx.fillRect(h.x + h.w/2 + 4, h.y + 18, 2, 3);
     });
 
-    // 4. Green Bushes
+    // 4. Bushes
     this.bushes.forEach(b => {
       ctx.fillStyle = '#00a800';
       ctx.beginPath();
@@ -703,10 +718,10 @@ class SuperMieleGame {
       ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
     });
 
-    // 5. Ground Bricks
+    // 5. Ground Bricks (Aligned to 36x36 grid)
     this.platforms.forEach(p => {
-      for (let x = p.x; x < p.x + p.w; x += 32) {
-        for (let y = p.y; y < p.y + p.h; y += 32) {
+      for (let x = p.x; x < p.x + p.w; x += B_SIZE) {
+        for (let y = p.y; y < p.y + p.h; y += B_SIZE) {
           this.drawGroundBrick(x, y);
         }
       }
@@ -729,7 +744,7 @@ class SuperMieleGame {
         bImg = images.hit_block;
       }
       if (bImg && bImg.complete) {
-        ctx.drawImage(bImg, b.x, b.y + b.bumpY, b.w, b.h);
+        ctx.drawImage(bImg, b.x, b.y + b.bumpY, B_SIZE, B_SIZE);
       }
     });
 
@@ -754,7 +769,7 @@ class SuperMieleGame {
       ctx.fillRect(this.castle.x + this.castle.w/2 - 20, this.castle.y + this.castle.h - 54, 40, 54);
     }
 
-    // 9. Goombas & Bob-ombs (Exact 36x36 block size!)
+    // 9. Goombas & Bob-ombs
     this.enemies.forEach(e => {
       if (!e.dead) {
         const eImg = e.type === 'bobomb' ? images.bobomb : images.goomba;
@@ -780,7 +795,7 @@ class SuperMieleGame {
       }
     });
 
-    // 11. Miele The Cat Hero (Exact 36x36 Unit Hitbox Alignment!)
+    // 11. Miele The Cat Hero
     ctx.save();
     ctx.translate(this.x + this.w/2, this.y + this.h/2);
     if (this.facing === -1) ctx.scale(-1, 1);
@@ -793,14 +808,12 @@ class SuperMieleGame {
       catImg = step === 0 ? images.f0 : (step === 1 ? images.f1 : images.f2);
     }
 
-    // Soft drop shadow
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.beginPath();
     ctx.ellipse(0, 16, 18, 5, 0, 0, Math.PI*2);
     ctx.fill();
 
     if (catImg && catImg.complete) {
-      // Drawn centered on the 36x36 hitbox
       ctx.drawImage(catImg, -30, -18, 60, 36);
     }
     this.drawHat(-6, -20);
@@ -832,6 +845,28 @@ class SuperMieleGame {
         ctx.font = '10px "Press Start 2P", monospace'; ctx.fillStyle = '#fff';
         ctx.fillText('PRESS JUMP / SPACE', 180, 340);
       }
+    } else if (this.victoryTally) {
+      ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0,0,360,640);
+      ctx.textAlign = 'center';
+      ctx.font = '16px "Press Start 2P", monospace'; ctx.fillStyle = '#ffd32a';
+      ctx.fillText('COURSE CLEAR! 🌟', 180, 210);
+
+      ctx.fillStyle = '#101726'; ctx.fillRect(36, 230, 288, 170);
+      ctx.strokeStyle = '#54a0ff'; ctx.lineWidth = 3; ctx.strokeRect(36, 230, 288, 170);
+
+      ctx.font = '9px "Press Start 2P", monospace'; ctx.fillStyle = '#aaa';
+      ctx.fillText('FINAL SCORE', 180, 265);
+      ctx.font = '15px "Press Start 2P", monospace'; ctx.fillStyle = '#fff';
+      ctx.fillText(this.score.toString(), 180, 290);
+
+      ctx.font = '9px "Press Start 2P", monospace'; ctx.fillStyle = '#fbc531';
+      ctx.fillText(`🪙 ${this.coins} COINS COLLECTED`, 180, 325);
+      ctx.fillText(`⏱️ ${Math.ceil(this.timeRemaining)}s TIME LEFT`, 180, 350);
+
+      if (Math.sin(this.time * 6) > 0) {
+        ctx.font = '10px "Press Start 2P", monospace'; ctx.fillStyle = '#2ed573';
+        ctx.fillText('TAP TO PLAY AGAIN', 180, 440);
+      }
     } else if (this.state === 'GAMEOVER') {
       ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0,0,360,640);
       ctx.textAlign = 'center';
@@ -845,10 +880,10 @@ class SuperMieleGame {
   }
 
   drawGroundBrick(x, y) {
-    ctx.fillStyle = '#d35400'; ctx.fillRect(x, y, 32, 32);
-    ctx.fillStyle = '#e67e22'; ctx.fillRect(x, y, 30, 14); ctx.fillRect(x, y+16, 30, 14);
+    ctx.fillStyle = '#d35400'; ctx.fillRect(x, y, B_SIZE, B_SIZE);
+    ctx.fillStyle = '#e67e22'; ctx.fillRect(x, y, B_SIZE-2, 16); ctx.fillRect(x, y+18, B_SIZE-2, 16);
     ctx.fillStyle = '#000';
-    ctx.fillRect(x, y+14, 32, 2); ctx.fillRect(x+14, y, 2, 14); ctx.fillRect(x+30, y+16, 2, 14);
+    ctx.fillRect(x, y+16, B_SIZE, 2); ctx.fillRect(x+16, y, 2, 16); ctx.fillRect(x+34, y+18, 2, 16);
   }
 
   drawHat(hx, hy) {
